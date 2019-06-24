@@ -19,6 +19,14 @@ LittlevGL 具有以下特点：
  - 用 C 语言编写：具备很好的兼容性（兼容 C++）
  - 模拟器：在没有嵌入式硬件的情况下，可在 PC 上进行嵌入式 GUI 设计
 
+## 操作系统中使用
+
+LittlevGL 不是线程安全的。尽管如此，在操作系统中使用 LittlevGL 仍然非常简单。
+
+简单的方法是不使用操作系统的任务，而是使用 `lv_tasks`。`_lv_task_` 是 `lv_task_handler` 中定期调用的函数。在 `_lv_task_` 中，您可以获取传感器，缓冲区等的状态，并调用 LittlevGL 函数来刷新 GUI。调用 `lv_task_create（my_func，period_ms，LV_TASK_PRIO_LOWEST/LOW/MID/HIGH/HIGHEST，custom_ptr）` 函数创建 `_lv_task_` 
+
+如果您需要使用其他任务或线程，则需要一个互斥锁，在调用 `lv_task_handler` 之前应该获取它并在之后释放。此外，您必须在每个调用 LittlevGL（`lv _...`） 相关函数的任务和线程中使用该互斥锁。这样，您就可以在真正的多任务环境中使用 LittlevGL 只需使用互斥锁即可避免并发调用 LittlevGL 函数。
+
 ## LittlevGL 介绍
 
 - [图形对象](#图形对象)
@@ -775,3 +783,25 @@ iot-solution 中已经做了一些驱动适配，驱动路径： `components/hmi
     在 LittlevGL Settings 菜单中可以将自定义的驱动组件添加到 LittlevGL 的编译路径中（此时只编译自定义的驱动，不编译 iot-solution 提供的驱动组件），路径：`Use Custom Driver Defined By Users`。
 
 ## FAQs
+
+1. ``.dram0.bss' will not fit in region `dram0_0_seg'` 或 `region `dram0_0_seg' overflowed by 10072 bytes`
+
+    由于 LittlevGL 更新，增加了 `.bss` 代码量，如果编译时出现这个问题，可以在 `lv_conf.h` 文件中，将没有使用的主题(theme)、字体(font)、对象(objects)关掉，例如：程序中只使用默认主题，那么我们可以将其他的主题都关掉：
+    
+    ```c
+    /*================
+    *  THEME USAGE
+    *================*/
+    #define LV_THEME_LIVE_UPDATE    0       /*1: Allow theme switching at run time. Uses 8..10 kB of RAM*/
+
+    #define USE_LV_THEME_TEMPL      0       /*Just for test*/
+    #define USE_LV_THEME_DEFAULT    1       /*Built mainly from the built-in styles. Consumes very few RAM*/
+    #define USE_LV_THEME_ALIEN      0       /*Dark futuristic theme*/
+    #define USE_LV_THEME_NIGHT      0       /*Dark elegant theme*/
+    #define USE_LV_THEME_MONO       0       /*Mono color theme for monochrome displays*/
+    #define USE_LV_THEME_MATERIAL   0       /*Flat theme with bold colors and light shadows*/
+    #define USE_LV_THEME_ZEN        0       /*Peaceful, mainly light theme */
+    #define USE_LV_THEME_NEMO       0       /*Water-like theme based on the movie "Finding Nemo"*/
+    ```
+
+    类似，我们可以将其他不使用功能关掉。
